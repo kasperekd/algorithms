@@ -40,3 +40,11 @@ func HasEdge(g *Graph, u, v int) bool {
 	}
 	return false
 }
+
+func (g *Graph) String() string {
+	result := ""
+	for v, neighbors := range g.adj {
+		result += fmt.Sprintf("%d: %v\n", v, neighbors)
+	}
+	return result
+}

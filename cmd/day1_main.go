@@ -66,7 +66,40 @@ func task4() {
 	fmt.Println("BFS обход пустого графа g3 с 0:", bfsOrder5)
 }
 
+func task6() {
+	g := graph.NewGraph()
+
+	g.AddEdge(0, 1)
+	g.AddEdge(0, 2)
+	g.AddEdge(1, 3)
+	g.AddEdge(1, 4)
+	g.AddEdge(2, 5)
+	g.AddEdge(3, 5)
+
+	fmt.Println("Граф:")
+	fmt.Println(g.String())
+
+	bfsOrder := g.BFS(0)
+	fmt.Println("BFS:", bfsOrder)
+
+	dfsOrder := g.DFS(0)
+	fmt.Println("DFS:", dfsOrder)
+
+	g2 := graph.NewGraph()
+	g2.AddEdge(0, 1)
+	g2.AddEdge(0, 2)
+	g2.AddEdge(1, 3)
+	g2.AddEdge(2, 4)
+	fmt.Println("\nГраф g2:")
+	fmt.Println(g2.String())
+	bfsOrder2 := g2.BFS(0)
+	fmt.Println("BFS графа g2:", bfsOrder2)
+	dfsOrder2 := g2.DFS(0)
+	fmt.Println("DFS графа g2:", dfsOrder2)
+}
+
 func main() {
-	task3()
-	task4()
+	// task3()
+	// task4()
+	task6()
 }
