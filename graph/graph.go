@@ -29,3 +29,14 @@ func (g *Graph) PrintGraph() {
 		fmt.Printf("Vertex %d: Neighbors: %v\n", vertex, neighbors)
 	}
 }
+
+func HasEdge(g *Graph, u, v int) bool {
+	if neighbors, ok := g.adj[u]; ok {
+		for _, neighbor := range neighbors {
+			if neighbor == v {
+				return true
+			}
+		}
+	}
+	return false
+}
