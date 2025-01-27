@@ -98,8 +98,50 @@ func task6() {
 	fmt.Println("DFS графа g2:", dfsOrder2)
 }
 
+func task8() {
+	g := graph.NewGraph()
+
+	g.AddEdge(0, 1)
+	g.AddEdge(0, 2)
+	g.AddEdge(1, 3)
+
+	g.AddEdge(4, 5)
+	g.AddEdge(5, 6)
+	g.AddEdge(6, 4)
+
+	fmt.Println("разорванный:")
+	fmt.Println(g.String())
+
+	count, comp := g.ConnectedComponents()
+	fmt.Println("Связных компонент:", count)
+	fmt.Println("Сопоставление:", comp)
+
+	g2 := graph.NewGraph()
+	g2.AddEdge(0, 1)
+	g2.AddEdge(0, 2)
+	g2.AddEdge(1, 3)
+	g2.AddEdge(2, 4)
+	g2.AddEdge(3, 5)
+	g2.AddEdge(4, 6)
+	g2.AddEdge(5, 6)
+	fmt.Println("\nСвязный:")
+	fmt.Println(g2.String())
+	count2, comp2 := g2.ConnectedComponents()
+	fmt.Println("Связных компонент g2:", count2)
+	fmt.Println("Сопоставление :", comp2)
+
+	g3 := graph.NewGraph()
+	g3.AddEdge(0, 1)
+	fmt.Println("\nПростой:")
+	fmt.Println(g3.String())
+	count3, comp3 := g3.ConnectedComponents()
+	fmt.Println("Количество:", count3)
+	fmt.Println("Сопоставление:", comp3)
+}
+
 func main() {
-	// task3()
-	// task4()
+	task3()
+	task4()
 	task6()
+	task8()
 }

@@ -48,3 +48,24 @@ func (g *Graph) String() string {
 	}
 	return result
 }
+
+func (g *Graph) ConnectedComponents() (count int, comp map[int]int) {
+	visited := make(map[int]bool)
+	comp = make(map[int]int)
+	count = 0
+
+	for v := range g.adj {
+		if !visited[v] {
+			count++
+			dfsOrder := g.DFS(v)
+
+			for _, u := range dfsOrder {
+				visited[u] = true
+				comp[u] = count
+			}
+
+		}
+	}
+
+	return count, comp
+}
