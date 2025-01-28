@@ -30,6 +30,17 @@ func (g *Graph) AddEdge(u, v, w int) {
 	}
 	g.adj[u] = append(g.adj[u], v)
 
+	found := false
+	for _, edge := range g.edges {
+		if (edge.U == u && edge.V == v) || (edge.U == v && edge.V == u) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		g.edges = append(g.edges, Edge{U: u, V: v, W: w})
+	}
+
 	if _, ok := g.adj[v]; !ok {
 		g.adj[v] = make([]int, 0)
 	}
@@ -101,14 +112,20 @@ func (g *Graph) GetAllEdges() []Edge {
 	return edges
 }
 
-func (g *Graph) GetNeighbors(u int) []struct{ v, w int } {
-	neighbors := make([]struct{ v, w int }, 0)
-	for _, edge := range g.edges {
-		if edge.U == u {
-			neighbors = append(neighbors, struct{ v, w int }{v: edge.V, w: edge.W})
+func (g *Graph) GetNeighbors(u int) []struct{ V, W int } {
+	neighbors := make([]struct{ V, W int }, 0)
+	for _, v := range g.adj[u] {
+		w := -1
+		for _, edge := range g.edges {
+			if (edge.U == u && edge.V == v) || (edge.U == v && edge.V == u) {
+				w = edge.W
+				break
+			}
 		}
-		if edge.V == u {
-			neighbors = append(neighbors, struct{ v, w int }{v: edge.U, w: edge.W})
+		if w != -1 {
+			neighbors = append(neighbors, struct{ V, W int }{V: v, W: w})
+		} else {
+			fmt.Printf("Warning: Edge (%d, %d) not found in edges list.\n", u, v)
 		}
 	}
 	return neighbors

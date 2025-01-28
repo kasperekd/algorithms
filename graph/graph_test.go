@@ -138,3 +138,81 @@ func TestConnectedComponents(t *testing.T) {
 		t.Errorf("ConnectedComponents() count3 = %d, want %d", count3, 1)
 	}
 }
+
+func TestGetNeighbors(t *testing.T) {
+	g := graph.NewGraph()
+	g.AddEdge(0, 1, 4)
+	g.AddEdge(0, 2, 2)
+	g.AddEdge(1, 2, 1)
+	g.AddEdge(2, 3, 5)
+
+	tests := []struct {
+		name    string
+		vertex  int
+		want    []struct{ v, w int }
+		wantErr bool
+	}{
+		{
+			name:   "Neighbors of vertex 0",
+			vertex: 0,
+			want: []struct{ v, w int }{
+				{v: 1, w: 4},
+				{v: 2, w: 2},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "Neighbors of vertex 2",
+			vertex: 2,
+			want: []struct{ v, w int }{
+				{v: 0, w: 2},
+				{v: 1, w: 1},
+				{v: 3, w: 5},
+			},
+			wantErr: false,
+		},
+		{
+			name:   "Neighbors of vertex 3",
+			vertex: 3,
+			want: []struct{ v, w int }{
+				{v: 2, w: 5},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "Non-existent vertex",
+			vertex:  4,
+			want:    []struct{ v, w int }{},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := g.GetNeighbors(tt.vertex)
+
+			if len(got) != len(tt.want) {
+				t.Errorf("GetNeighbors() returned a slice of different length than expected. Got: %v, Want: %v", got, tt.want)
+				return
+			}
+
+			for _, wantItem := range tt.want {
+				if !contains(got, wantItem) {
+					t.Errorf("GetNeighbors() doesn't contain expected item: %v", wantItem)
+				}
+			}
+		})
+	}
+}
+
+func contains(s []struct{ V, W int }, item struct{ v, w int }) bool {
+	for _, v := range s {
+		if struct {
+			v int
+			w int
+		}{v: v.V, w: v.W} == item {
+			return true
+		}
+	}
+	return false
+}

@@ -1,73 +1,71 @@
 package graph
 
-import "container/heap"
-
-type Item struct {
-	vertex, dist int
-}
-
-type PriorityQueue []*Item
-
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].dist < pq[j].dist
-}
-
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-}
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	item := x.(*Item)
-	*pq = append(*pq, item)
-}
-
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	old[n-1] = nil
-	*pq = old[0 : n-1]
-	return item
-}
+import (
+	"math"
+)
 
 func Dijkstra(g *Graph, start int) ([]int, []int) {
 	dist := make([]int, len(g.adj))
 	parent := make([]int, len(g.adj))
 	visited := make([]bool, len(g.adj))
 
-	for i := range dist {
-		dist[i] = 1<<31 - 1
-		parent[i] = -1
+	vertexMap := make(map[int]int)
+	indexMap := make(map[int]int)
+	i := 0
+	for v := range g.adj {
+		vertexMap[v] = i
+		indexMap[i] = v
+		i++
 	}
 
-	dist[start] = 0
+	for i := 0; i < len(g.adj); i++ {
+		dist[i] = math.MaxInt
+		parent[i] = -1
+		visited[i] = false
+	}
 
-	pq := make(PriorityQueue, 0)
-	heap.Init(&pq)
-	heap.Push(&pq, &Item{vertex: start, dist: 0})
+	startIndex := vertexMap[start]
+	dist[startIndex] = 0
 
-	for pq.Len() > 0 {
-		item := heap.Pop(&pq).(*Item)
-		u := item.vertex
+	for count := 0; count < len(g.adj)-1; count++ {
+		uIndex := -1
+		minDist := math.MaxInt
 
-		if visited[u] {
-			continue
+		for vIndex := 0; vIndex < len(g.adj); vIndex++ {
+			if !visited[vIndex] && dist[vIndex] <= minDist {
+				minDist = dist[vIndex]
+				uIndex = vIndex
+			}
 		}
 
-		visited[u] = true
+		if uIndex == -1 {
+			break
+		}
+
+		u := indexMap[uIndex]
+
+		visited[uIndex] = true
 
 		for _, neighbor := range g.GetNeighbors(u) {
-			w := neighbor.v
-			weight := neighbor.w
-			if dist[u]+weight < dist[w] {
-				dist[w] = dist[u] + weight
-				parent[w] = u
-				heap.Push(&pq, &Item{vertex: w, dist: dist[w]})
+			v := neighbor.V
+			w := neighbor.W
+			vIndex := vertexMap[v]
+
+			if !visited[vIndex] && dist[uIndex] != math.MaxInt && dist[uIndex]+w < dist[vIndex] {
+				dist[vIndex] = dist[uIndex] + w
+				parent[vIndex] = u
 			}
 		}
 	}
 
-	return dist, parent
+	originalParents := make([]int, len(parent))
+	for i := range parent {
+		if parent[i] != -1 {
+			originalParents[i] = indexMap[parent[i]]
+		} else {
+			originalParents[i] = -1
+		}
+	}
+
+	return dist, originalParents
 }
