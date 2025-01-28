@@ -9,10 +9,10 @@ import (
 
 func TestHasEdge(t *testing.T) {
 	g := graph.NewGraph()
-	g.AddEdge(0, 1)
-	g.AddEdge(0, 2)
-	g.AddEdge(1, 2)
-	g.AddEdge(2, 3)
+	g.AddEdge(0, 1, 0)
+	g.AddEdge(0, 2, 0)
+	g.AddEdge(1, 2, 0)
+	g.AddEdge(2, 3, 0)
 
 	tests := []struct {
 		name string
@@ -37,7 +37,7 @@ func TestHasEdge(t *testing.T) {
 	}
 
 	g2 := graph.NewGraph()
-	g2.AddEdge(5, 7)
+	g2.AddEdge(5, 7, 0)
 	if got := graph.HasEdge(g2, 5, 7); !got {
 		t.Errorf("HasEdge(5, 7) on g2 = %v, want %v", got, true)
 	}
@@ -48,14 +48,14 @@ func TestHasEdge(t *testing.T) {
 
 func TestBFS(t *testing.T) {
 	g := graph.NewGraph()
-	g.AddEdge(0, 1)
-	g.AddEdge(0, 2)
-	g.AddEdge(1, 2)
-	g.AddEdge(1, 3)
-	g.AddEdge(2, 4)
-	g.AddEdge(3, 5)
-	g.AddEdge(5, 6)
-	g.AddEdge(6, 4)
+	g.AddEdge(0, 1, 0)
+	g.AddEdge(0, 2, 0)
+	g.AddEdge(1, 2, 0)
+	g.AddEdge(1, 3, 0)
+	g.AddEdge(2, 4, 0)
+	g.AddEdge(3, 5, 0)
+	g.AddEdge(5, 6, 0)
+	g.AddEdge(6, 4, 0)
 
 	tests := []struct {
 		name    string
@@ -78,7 +78,7 @@ func TestBFS(t *testing.T) {
 	}
 
 	g2 := graph.NewGraph()
-	g2.AddEdge(5, 7)
+	g2.AddEdge(5, 7, 0)
 	if got := g2.BFS(5); !reflect.DeepEqual(got, []int{5, 7}) {
 		t.Errorf("BFS(5) on g2 = %v, want %v", got, []int{5, 7})
 	}
@@ -86,12 +86,12 @@ func TestBFS(t *testing.T) {
 
 func TestDFS(t *testing.T) {
 	g := graph.NewGraph()
-	g.AddEdge(0, 1)
-	g.AddEdge(0, 2)
-	g.AddEdge(1, 3)
-	g.AddEdge(1, 4)
-	g.AddEdge(2, 5)
-	g.AddEdge(3, 5)
+	g.AddEdge(0, 1, 0)
+	g.AddEdge(0, 2, 0)
+	g.AddEdge(1, 3, 0)
+	g.AddEdge(1, 4, 0)
+	g.AddEdge(2, 5, 0)
+	g.AddEdge(3, 5, 0)
 
 	want := []int{0, 1, 3, 5, 2, 4}
 	got := g.DFS(0)
@@ -102,12 +102,12 @@ func TestDFS(t *testing.T) {
 
 func TestConnectedComponents(t *testing.T) {
 	g := graph.NewGraph()
-	g.AddEdge(0, 1)
-	g.AddEdge(0, 2)
-	g.AddEdge(1, 3)
-	g.AddEdge(4, 5)
-	g.AddEdge(5, 6)
-	g.AddEdge(6, 4)
+	g.AddEdge(0, 1, 0)
+	g.AddEdge(0, 2, 0)
+	g.AddEdge(1, 3, 0)
+	g.AddEdge(4, 5, 0)
+	g.AddEdge(5, 6, 0)
+	g.AddEdge(6, 4, 0)
 
 	count, comp := g.ConnectedComponents()
 	if count != 2 {
@@ -119,20 +119,20 @@ func TestConnectedComponents(t *testing.T) {
 	}
 
 	g2 := graph.NewGraph()
-	g2.AddEdge(0, 1)
-	g2.AddEdge(0, 2)
-	g2.AddEdge(1, 3)
-	g2.AddEdge(2, 4)
-	g2.AddEdge(3, 5)
-	g2.AddEdge(4, 6)
-	g2.AddEdge(5, 6)
+	g2.AddEdge(0, 1, 0)
+	g2.AddEdge(0, 2, 0)
+	g2.AddEdge(1, 3, 0)
+	g2.AddEdge(2, 4, 0)
+	g2.AddEdge(3, 5, 0)
+	g2.AddEdge(4, 6, 0)
+	g2.AddEdge(5, 6, 0)
 	count2, _ := g2.ConnectedComponents()
 	if count2 != 1 {
 		t.Errorf("ConnectedComponents() count2 = %d, want %d", count2, 1)
 	}
 
 	g3 := graph.NewGraph()
-	g3.AddEdge(0, 1)
+	g3.AddEdge(0, 1, 0)
 	count3, _ := g3.ConnectedComponents()
 	if count3 != 1 {
 		t.Errorf("ConnectedComponents() count3 = %d, want %d", count3, 1)
