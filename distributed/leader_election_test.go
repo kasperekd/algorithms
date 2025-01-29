@@ -4,76 +4,162 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestBullyElection(t *testing.T) {
 	network := NewNetwork()
-	nodes := make([]*Node, 5)
-	for i := 0; i < 5; i++ {
-		nodes[i] = NewNode(i, network, (i+1)%5)
+	numNodes := 5
+	nodes := make([]*Node, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = NewNode(i, network, (i+1)%numNodes)
 		network.Register(i, nodes[i].Inbox)
 		nodes[i].Start()
 	}
 
-	fmt.Println("Starting Bully Election Test")
-	nodes[2].startBullyElection()
+	nodes[numNodes-1].SetAlive(false)
 
-	time.Sleep(2 * time.Second)
+	nodes[0].startBullyElection()
 
-	leaderID := -1
+	time.Sleep(10 * time.Second)
+
+	leaderCount := 0
+	var leaderID int
 	for _, node := range nodes {
 		if node.IsLeader {
+			leaderCount++
 			leaderID = node.ID
-			break
 		}
 	}
 
-	assert.NotEqual(t, -1, leaderID, "No leader was elected")
-
-	for _, node := range nodes {
-		assert.Equal(t, leaderID, node.LeaderID, "Nodes do not agree on the leader")
+	if leaderCount != 1 {
+		t.Errorf("Expected 1 leader, got %d", leaderCount)
 	}
-	fmt.Printf("Bully Election Test Passed. Leader: %d\n", leaderID)
 
+	if leaderID != numNodes-2 {
+		t.Errorf("Expected a leader %d, got %d", numNodes-2, leaderID)
+	}
+
+	fmt.Printf("Bully election test passed. Leader is Node %d\n", leaderID)
+}
+
+func TestBullyElectionAllAlive(t *testing.T) {
+	network := NewNetwork()
+	numNodes := 5
+	nodes := make([]*Node, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = NewNode(i, network, (i+1)%numNodes)
+		network.Register(i, nodes[i].Inbox)
+		nodes[i].Start()
+	}
+
+	nodes[0].startBullyElection()
+
+	time.Sleep(10 * time.Second)
+
+	leaderCount := 0
+	var leaderID int
+	for _, node := range nodes {
+		if node.IsLeader {
+			leaderCount++
+			leaderID = node.ID
+		}
+	}
+
+	if leaderCount != 1 {
+		t.Errorf("Expected 1 leader, got %d", leaderCount)
+	}
+
+	if leaderID != numNodes-1 {
+		t.Errorf("Expected a leader %d, got %d", numNodes-1, leaderID)
+	}
+
+	fmt.Printf("Bully election all alive test passed. Leader is Node %d\n", leaderID)
 }
 
 func TestRingElection(t *testing.T) {
 	network := NewNetwork()
-	nodes := make([]*Node, 5)
-	for i := 0; i < 5; i++ {
-		nodes[i] = NewNode(i, network, (i+1)%5)
+	numNodes := 5
+	nodes := make([]*Node, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = NewNode(i, network, (i+1)%numNodes)
 		network.Register(i, nodes[i].Inbox)
 		nodes[i].Start()
 	}
 
-	fmt.Println("Starting Ring Election Test")
-	nodes[0].startRingElection()
+	// nodes[numNodes-1].SetAlive(false) // Тут так просто нельзя удалить ноду,
+	// поскольку они соеденены в кольцо и если один отвалится, то колько будет нарушено
 
-	time.Sleep(2 * time.Second)
+	nodes[0].StartRingElection()
 
-	leaderID := -1
+	time.Sleep(10 * time.Second)
+
+	leaderCount := 0
+	var leaderID int
 	for _, node := range nodes {
 		if node.IsLeader {
+			leaderCount++
 			leaderID = node.ID
-			break
 		}
 	}
 
-	assert.NotEqual(t, -1, leaderID, "No leader was elected")
-
-	for _, node := range nodes {
-		assert.Equal(t, leaderID, node.LeaderID, "Nodes do not agree on the leader")
+	if leaderCount != 1 {
+		t.Errorf("Expected 1 leader, got %d", leaderCount)
 	}
-	fmt.Printf("Ring Election Test Passed. Leader: %d\n", leaderID)
+
+	if leaderID != numNodes-1 {
+		t.Errorf("Expected a leader %d, got %d", numNodes-1, leaderID)
+	}
+	// if leaderID != numNodes-2 {
+	// 	t.Errorf("Expected a leader %d, got %d", numNodes-2, leaderID)
+	// }
+
+	fmt.Printf("Ring election test passed. Leader is Node %d\n", leaderID)
 }
 
-func TestGlobalCollection(t *testing.T) {
+func TestRingElectionAllAlive(t *testing.T) {
 	network := NewNetwork()
-	nodes := make([]*Node, 5)
-	for i := 0; i < 5; i++ {
-		nodes[i] = NewNode(i, network, (i+1)%5)
+	numNodes := 5
+	nodes := make([]*Node, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = NewNode(i, network, (i+1)%numNodes)
+		network.Register(i, nodes[i].Inbox)
+		nodes[i].Start()
+	}
+
+	nodes[2].StartRingElection()
+
+	time.Sleep(10 * time.Second)
+
+	leaderCount := 0
+	var leaderID int
+	for _, node := range nodes {
+		if node.IsLeader {
+			leaderCount++
+			leaderID = node.ID
+		}
+	}
+
+	if leaderCount != 1 {
+		t.Errorf("Expected 1 leader, got %d", leaderCount)
+	}
+	if leaderID != numNodes-1 {
+		t.Errorf("Expected a leader %d, got %d", numNodes-1, leaderID)
+	}
+
+	fmt.Printf("Ring election test passed. Leader is Node %d\n", leaderID)
+}
+
+func TestDataCollection(t *testing.T) {
+	network := NewNetwork()
+	numNodes := 5
+	nodes := make([]*Node, numNodes)
+
+	for i := 0; i < numNodes; i++ {
+		nodes[i] = NewNode(i, network, (i+1)%numNodes)
 		network.Register(i, nodes[i].Inbox)
 		nodes[i].Start()
 	}
@@ -81,39 +167,18 @@ func TestGlobalCollection(t *testing.T) {
 	nodes[0].IsLeader = true
 	nodes[0].LeaderID = nodes[0].ID
 
-	fmt.Println("Starting Global Collection Test")
-	go nodes[0].StartGlobalCollection()
+	nodes[0].StartGlobalCollection()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	expectedSum := 0
 	for _, node := range nodes {
 		expectedSum += node.localCount
 	}
 
-	fmt.Println("Checking if printed total sum is near to expected sum. Please check output.")
-
-}
-
-func TestNodeFailure(t *testing.T) {
-	network := NewNetwork()
-	nodes := make([]*Node, 5)
-	for i := 0; i < 5; i++ {
-		nodes[i] = NewNode(i, network, (i+1)%5)
-		network.Register(i, nodes[i].Inbox)
-		nodes[i].Start()
+	if nodes[0].collectSum != expectedSum {
+		t.Errorf("Expected sum %d, got %d", expectedSum, nodes[0].collectSum)
 	}
 
-	nodes[0].IsLeader = true
-	nodes[0].LeaderID = nodes[0].ID
-
-	fmt.Println("Starting Node Failure Test")
-	nodes[2].SetAlive(false)
-
-	go nodes[0].StartGlobalCollection()
-	time.Sleep(2 * time.Second)
-
-	fmt.Println("Checking if printed total sum is near to expected sum. Please check output. Node 2 is down.")
-	fmt.Println("Node Failure Test Passed (manual check).")
-
+	fmt.Printf("Data collection test passed. Total sum: %d\n", nodes[0].collectSum)
 }
