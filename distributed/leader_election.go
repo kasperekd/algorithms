@@ -21,6 +21,7 @@ type Message struct {
 type Network struct {
 	mu       sync.RWMutex
 	channels map[int]chan Message
+	nodes    map[int]*Node
 }
 
 type Node struct {
@@ -86,18 +87,41 @@ func (n *Node) SetAlive(alive bool) {
 	n.Alive = alive
 }
 
+func (n *Network) IsAlive(id int) bool {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	node, exists := n.nodes[id]
+	return exists && node.Alive
+}
+
+func (n *Network) GetAliveNodes() []int {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	alive := make([]int, 0)
+	for id, node := range n.nodes {
+		node.mu.Lock()
+		if node.Alive {
+			alive = append(alive, id)
+		}
+		node.mu.Unlock()
+	}
+	return alive
+}
+
 func NewNetwork() *Network {
 	return &Network{
 		channels: make(map[int]chan Message),
+		nodes:    make(map[int]*Node),
 	}
 }
 
-func (n *Network) Register(id int, ch chan Message) {
+func (n *Network) Register(node *Node) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	n.channels[id] = ch
+	n.channels[node.ID] = node.Inbox
+	n.nodes[node.ID] = node
 }
-
 func (n *Network) Send(toID int, msg Message) bool {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -123,7 +147,7 @@ func (n *Network) GetNodes() []int {
 	return ids
 }
 
-func (n *Node) startBullyElection() {
+func (n *Node) StartBullyElection() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
@@ -177,7 +201,7 @@ func (n *Node) handleElection(msg Message) {
 		}()
 
 		if n.electionTimer == nil {
-			go n.startBullyElection()
+			go n.StartBullyElection()
 		}
 	} else if msg.FromID > n.ID {
 		if n.electionTimer != nil {
@@ -254,63 +278,94 @@ func (n *Node) handleRingElection(msg Message) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	fmt.Printf("Node %d processing RING election (Origin: %d, MaxID: %d)\n",
-		n.ID, msg.OriginID, msg.MaxID)
-
-	updatedMax := max(msg.MaxID, n.ID)
+	currentMax := msg.MaxID
+	if n.Alive && n.ID > currentMax {
+		currentMax = n.ID
+	}
 
 	if msg.OriginID == n.ID {
-		coordinatorMsg := Message{
-			Kind:      "COORDINATOR",
-			Algorithm: "ring",
-			FromID:    n.ID,
-			ToID:      n.NextID,
-			MaxID:     updatedMax,
-			OriginID:  n.ID,
+		if nextID := n.findNextAlive(); nextID != -1 {
+			n.network.Send(nextID, Message{
+				Kind:      "COORDINATOR",
+				Algorithm: "ring",
+				MaxID:     currentMax,
+				OriginID:  n.ID,
+			})
+		} else {
+			n.declareLeader()
 		}
-		n.network.Send(n.NextID, coordinatorMsg)
 		return
 	}
 
-	forwardMsg := Message{
-		Kind:      "ELECTION",
-		Algorithm: "ring",
-		FromID:    n.ID,
-		ToID:      n.NextID,
-		OriginID:  msg.OriginID,
-		MaxID:     updatedMax,
+	if nextID := n.findNextAlive(); nextID != -1 {
+		n.network.Send(nextID, Message{
+			Kind:      "ELECTION",
+			Algorithm: "ring",
+			OriginID:  msg.OriginID,
+			MaxID:     currentMax,
+		})
 	}
-	n.network.Send(n.NextID, forwardMsg)
 }
 
 func (n *Node) StartGlobalCollection() {
-	if !n.IsLeader {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if !n.IsLeader || !n.Alive {
 		return
 	}
 
-	n.mu.Lock()
+	aliveNodes := n.network.GetAliveNodes()
+	expected := len(aliveNodes) - 1 // Исключаем себя
 	n.collectSum = 0
 	n.collectCount = 0
 	n.collectDone = make(chan struct{})
-	allNodes := n.network.GetNodes()
-	// expected := len(allNodes) - 1
-	n.mu.Unlock()
 
-	for _, id := range allNodes {
+	for _, id := range aliveNodes {
 		if id != n.ID {
 			n.network.Send(id, Message{Kind: "COLLECT", FromID: n.ID, ToID: id})
 		}
 	}
 
-	select {
-	case <-n.collectDone:
-		n.mu.Lock()
-		n.collectSum += n.localCount
-		fmt.Printf("Total sum: %d\n", n.collectSum)
-		n.mu.Unlock()
-	case <-time.After(10 * time.Second):
-		fmt.Println("Timeout during data collection")
+	go func() {
+		select {
+		case <-n.collectDone:
+			n.mu.Lock()
+			total := n.collectSum + n.localCount
+			fmt.Printf("Total sum from %d/%d nodes: %d\n",
+				n.collectCount+1, expected+1, total)
+			n.mu.Unlock()
+		case <-time.After(5 * time.Second):
+			n.mu.Lock()
+			fmt.Printf("Partial data: %d/%d (Alive: %v)\n",
+				n.collectCount, expected, aliveNodes)
+			n.mu.Unlock()
+		}
+	}()
+}
+
+func (n *Node) handleCollectReply(msg Message) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if data, ok := msg.Data.(int); ok {
+		n.collectSum += data
+		n.collectCount++
+		if n.collectCount >= len(n.network.GetAliveNodes())-1 {
+			close(n.collectDone)
+		}
 	}
+}
+
+func (n *Node) findNextAlive() int {
+	all := n.network.GetNodes()
+	for i := 0; i < len(all); i++ {
+		candidate := (n.NextID + i) % len(all)
+		if n.network.IsAlive(candidate) && candidate != n.ID {
+			return candidate
+		}
+	}
+	return -1
 }
 
 func (n *Node) handleCollect(msg Message) {
@@ -323,14 +378,14 @@ func (n *Node) handleCollect(msg Message) {
 	n.network.Send(msg.FromID, reply)
 }
 
-func (n *Node) handleCollectReply(msg Message) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	if data, ok := msg.Data.(int); ok {
-		n.collectSum += data
-		n.collectCount++
-		if n.collectCount == len(n.network.GetNodes())-1 {
-			close(n.collectDone)
-		}
-	}
-}
+// func (n *Node) handleCollectReply(msg Message) {
+// 	n.mu.Lock()
+// 	defer n.mu.Unlock()
+// 	if data, ok := msg.Data.(int); ok {
+// 		n.collectSum += data
+// 		n.collectCount++
+// 		if n.collectCount == len(n.network.GetNodes())-1 {
+// 			close(n.collectDone)
+// 		}
+// 	}
+// }
