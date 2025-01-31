@@ -188,26 +188,22 @@ func TestMain(t *testing.T) {
 	nodes := make([]*Node, 0)
 	numNodes := 5
 
-	// Создаем узлы и настраиваем кольцо
 	for i := 0; i <= numNodes; i++ {
 		nextID := i%numNodes + 1
 		node := NewNode(i, network, nextID)
-		node.LeaderID = -1 // Изначально лидер неизвестен
+		node.LeaderID = -1
 		node.SetAlive(true)
 		network.Register(node)
 		nodes = append(nodes, node)
 		node.Start()
 	}
 
-	// Даем время на инициализацию
 	time.Sleep(time.Second)
 
-	// Узел 1 запускает выборы
 	fmt.Println("--- Запуск выборов ---")
 	nodes[1].StartBullyElection()
 	time.Sleep(2 * time.Second)
 
-	// Определяем лидера
 	var leader *Node
 	for _, n := range nodes {
 		if n.IsLeader {
@@ -217,29 +213,24 @@ func TestMain(t *testing.T) {
 	}
 	fmt.Printf("Лидер выбран: Узел %d\n\n", leader.ID)
 
-	// Сбор данных лидером
 	fmt.Println("--- Сбор данных ---")
 	leader.StartGlobalCollection()
 	time.Sleep(3 * time.Second)
 
-	// Имитация сбоя узла 2
 	fmt.Println("\n--- Имитация сбоя Узла 2 ---")
 	nodes[2].SetAlive(false)
 	fmt.Println("Узел 2 недоступен")
 
-	// Повторный сбор данных
 	fmt.Println("\n--- Повторный сбор данных ---")
 	leader.StartGlobalCollection()
-	time.Sleep(11 * time.Second) // Ожидаем таймаут
+	time.Sleep(11 * time.Second)
 
-	// Имитация сбоя лидера и новые выборы
 	fmt.Println("\n--- Сбой лидера и новые выборы ---")
 	leader.SetAlive(false)
 	fmt.Printf("Лидер (Узел %d) недоступен\n", leader.ID)
 	nodes[0].StartBullyElection()
 	time.Sleep(20 * time.Second)
 
-	// Поиск нового лидера
 	var newLeader *Node
 	for _, n := range nodes {
 		if n.IsLeader && n.Alive {
@@ -254,7 +245,6 @@ func TestMain(t *testing.T) {
 		return
 	}
 
-	// Сбор данных новым лидером
 	fmt.Println("--- Сбор данных новым лидером ---")
 	newLeader.StartGlobalCollection()
 	time.Sleep(5 * time.Second)
